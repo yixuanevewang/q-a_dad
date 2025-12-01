@@ -18,7 +18,6 @@
             --a-text: #14532d;
             --hidden-bg: #e2e8f0; /* Grey for hidden */
             --hidden-text: #64748b;
-            --highlight-bg: #facc15; /* Yellow */
             --btn-next: #3b82f6;
             --btn-prev: #94a3b8;
         }
@@ -137,19 +136,6 @@
             color: var(--hidden-text);
             letter-spacing: 2px;
             text-transform: uppercase;
-        }
-
-        /* --- Highlighting --- */
-        .word-span {
-            padding: 0.2vh 0.5vh;
-            border-radius: 6px;
-            transition: background-color 0.1s;
-        }
-
-        .speaking {
-            background-color: var(--highlight-bg);
-            color: black;
-            transform: scale(1.05);
         }
 
         /* --- Navigation Bar --- */
@@ -282,19 +268,18 @@
 
             // 1. Setup Question
             qContent.innerHTML = '';
-            // Split English into words for highlighting
+            // Split English into words for layout consistency, even if not highlighting
             const qLineEn = document.createElement('div');
             qLineEn.className = 'line-en';
             data.q_en.split(' ').forEach(word => {
                 const span = document.createElement('span');
-                span.className = 'word-span';
                 span.textContent = word;
                 qLineEn.appendChild(span);
             });
             
             // Whole line for Chinese
             const qLineZh = document.createElement('div');
-            qLineZh.className = 'line-zh word-span'; 
+            qLineZh.className = 'line-zh'; 
             qLineZh.textContent = data.q_zh;
 
             qContent.appendChild(qLineEn);
@@ -307,13 +292,12 @@
             aLineEn.className = 'line-en';
             data.a_en.split(' ').forEach(word => {
                 const span = document.createElement('span');
-                span.className = 'word-span';
                 span.textContent = word;
                 aLineEn.appendChild(span);
             });
 
             const aLineZh = document.createElement('div');
-            aLineZh.className = 'line-zh word-span';
+            aLineZh.className = 'line-zh';
             aLineZh.textContent = data.a_zh;
 
             aContent.appendChild(aLineEn);
@@ -368,50 +352,34 @@
         // --- Speech Logic ---
         function stopSpeech() {
             if (window.speechSynthesis) window.speechSynthesis.cancel();
-            document.querySelectorAll('.speaking').forEach(el => el.classList.remove('speaking'));
         }
 
         function playSequence(container) {
             if (!window.speechSynthesis) return;
             
-            // Gather all highlightable spans inside the container
-            const spans = Array.from(container.querySelectorAll('.word-span'));
-            
             stopSpeech();
 
-            let index = 0;
+            // Select the text blocks
+            const enLine = container.querySelector('.line-en');
+            const zhLine = container.querySelector('.line-zh');
 
-            function playNext() {
-                if (index >= spans.length) return;
+            if (!enLine || !zhLine) return;
 
-                const el = spans[index];
-                const text = el.textContent;
-                
-                const isChinese = /[\u4e00-\u9fa5]/.test(text);
+            // Use full text content for smooth reading
+            const uEn = new SpeechSynthesisUtterance(enLine.textContent);
+            uEn.lang = 'en-US';
+            uEn.rate = 1.0; // Normal Speed
 
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = isChinese ? 'zh-CN' : 'en-US';
-                utterance.rate = 0.4; 
+            const uZh = new SpeechSynthesisUtterance(zhLine.textContent);
+            uZh.lang = 'zh-CN';
+            uZh.rate = 1.0; // Normal Speed
 
-                // Start Highlight
-                utterance.onstart = () => {
-                    el.classList.add('speaking');
-                };
+            // Chain: En -> Zh
+            uEn.onend = () => {
+                window.speechSynthesis.speak(uZh);
+            };
 
-                // End Highlight & Next
-                const finish = () => {
-                    el.classList.remove('speaking');
-                    index++;
-                    playNext();
-                };
-
-                utterance.onend = finish;
-                utterance.onerror = finish;
-
-                window.speechSynthesis.speak(utterance);
-            }
-
-            playNext();
+            window.speechSynthesis.speak(uEn);
         }
 
         // Initialize
