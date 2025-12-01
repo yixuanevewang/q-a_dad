@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- Fullscreen App Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Q&A Flashcards</title>
+    
+    <style>
+        /* --- Reset & Variables --- */
+        :root {
+            --bg-color: #f8fafc;
+            --q-bg: #dbeafe; /* Light Blue */
+            --q-text: #1e3a8a;
+            --a-bg: #dcfce7; /* Light Green */
+            --a-text: #14532d;
+            --hidden-bg: #e2e8f0; /* Grey for hidden */
+            --hidden-text: #64748b;
+            --highlight-bg: #facc15; /* Yellow */
+            --btn-next: #3b82f6;
+            --btn-prev: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            background-color: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            /* Layout Match: Align Top with Padding */
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 3vh;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* --- Main Layout --- */
+        .container {
+            width: 96vw;
+            /* Layout Match: Fixed height leaves buffer at bottom */
+            height: 87vh; 
+            display: flex;
+            flex-direction: column;
+            gap: 2vh;
+        }
+
+        /* --- Boxes --- */
+        .card-box {
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            transition: transform 0.1s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-box:active {
+            transform: scale(0.99);
+        }
+
+        /* Question Specifics */
+        #question-box {
+            flex: 1; /* Takes up top half space */
+            background-color: var(--q-bg);
+            border: 3px solid #bfdbfe;
+        }
+
+        /* Answer Specifics */
+        #answer-box {
+            flex: 1; /* Takes up bottom half space */
+            background-color: var(--hidden-bg); /* Default hidden color */
+            border: 3px solid #cbd5e1;
+        }
+
+        #answer-box.revealed {
+            background-color: var(--a-bg);
+            border-color: #bbf7d0;
+        }
+
+        /* --- Typography --- */
+        .text-content {
+            display: flex;
+            flex-direction: column;
+            gap: 1vh;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .line-en {
+            font-size: 6vh; 
+            font-weight: 800; 
+            color: var(--q-text);
+            line-height: 1.1;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1vh; 
+        }
+
+        .line-zh {
+            font-size: 4.5vh; 
+            font-weight: 500;
+            color: #475569;
+            margin-top: 1vh;
+        }
+
+        /* Answer Styling overrides */
+        #answer-box .line-en {
+            color: var(--a-text);
+            font-weight: 600;
+        }
+
+        /* Hidden State Text */
+        .show-text {
+            font-size: 5vh; 
+            font-weight: 800;
+            color: var(--hidden-text);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        /* --- Highlighting --- */
+        .word-span {
+            padding: 0.2vh 0.5vh;
+            border-radius: 6px;
+            transition: background-color 0.1s;
+        }
+
+        .speaking {
+            background-color: var(--highlight-bg);
+            color: black;
+            transform: scale(1.05);
+        }
+
+        /* --- Navigation Bar --- */
+        .nav-bar {
+            height: 12vh;
+            display: flex;
+            gap: 2vw;
+            width: 100%;
+            flex-shrink: 0; /* Don't shrink */
+        }
+
+        .nav-btn {
+            flex: 1;
+            border-radius: 16px;
+            border: none;
+            font-size: 3vh;
+            font-weight: 800;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-transform: uppercase;
+        }
+
+        .nav-btn:active {
+            transform: translateY(2px);
+            box-shadow: none;
+        }
+
+        .btn-prev { background-color: var(--btn-prev); }
+        .btn-next { background-color: var(--btn-next); }
+
+        .btn-disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .hint {
+            position: absolute;
+            bottom: 2vmin;
+            font-size: 1.5vh;
+            color: #94a3b8;
+            opacity: 0.6;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Question Area -->
+        <div class="card-box" id="question-box">
+            <div class="text-content" id="q-content">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+
+        <!-- Answer Area -->
+        <div class="card-box" id="answer-box">
+            <div class="show-text" id="show-label">TAP TO SHOW</div>
+            <div class="text-content" id="a-content" style="display: none;">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="nav-bar">
+            <button class="nav-btn btn-prev" id="btn-prev">BACK</button>
+            <button class="nav-btn btn-next" id="btn-next">NEXT</button>
+        </div>
+    </div>
+
+    <div class="hint">Tap Question to read • Tap Answer to reveal/read</div>
+
+    <script>
+        // ==========================================
+        //  USER DATA SECTION - EDIT HERE
+        // ==========================================
+        const qaData = [
+            {
+                q_en: "When were you admitted to this hospital (Queensway)?",
+                q_zh: "你什么时候住进这个医院？",
+                a_en: "Wednesday November 26.",
+                a_zh: "星期三， 十一月二十六号。"
+            },
+            {
+                q_en: "How did you get here?",
+                q_zh: "你怎么来到医院的？",
+                a_en: "By ambulance.",
+                a_zh: "救护车送来的。"
+            },
+            {
+                q_en: "What is the first event you can remember in hospital? Can you give some detail?",
+                q_zh: "你在医院能想到的第一件事是什么？可以给多一些细节吗？",
+                a_en: "Being at the Civic Hospital, having 2 procedures. Feeling foggy.",
+                a_zh: "在 Civic Hospital, 做了两个小手术。感觉意识模糊。"
+            },
+            {
+                q_en: "What is the last event you can recall before coming into hospital?",
+                q_zh: "来医院之前，发生了什么？",
+                a_en: "Being at home and having high heart rate, chest pain, calling 911.",
+                a_zh: "在家里心跳过速，心绞痛，打了911。"
+            },
+            {
+                q_en: "Where are you now?",
+                q_zh: "你现在在哪里？",
+                a_en: "Ottawa. Queensway Carelton Hospital.",
+                a_zh: "渥太华， Queensway Carelton Hospital。"
+            }
+        ];
+
+        // ==========================================
+        //  APP LOGIC
+        // ==========================================
+        
+        let currentIndex = 0;
+        let isAnswerRevealed = false;
+
+        const qBox = document.getElementById('question-box');
+        const aBox = document.getElementById('answer-box');
+        const qContent = document.getElementById('q-content');
+        const aContent = document.getElementById('a-content');
+        const showLabel = document.getElementById('show-label');
+        const btnPrev = document.getElementById('btn-prev');
+        const btnNext = document.getElementById('btn-next');
+
+        // --- Render Current Card ---
+        function renderCard() {
+            const data = qaData[currentIndex];
+            isAnswerRevealed = false;
+
+            // 1. Setup Question
+            qContent.innerHTML = '';
+            // Split English into words for highlighting
+            const qLineEn = document.createElement('div');
+            qLineEn.className = 'line-en';
+            data.q_en.split(' ').forEach(word => {
+                const span = document.createElement('span');
+                span.className = 'word-span';
+                span.textContent = word;
+                qLineEn.appendChild(span);
+            });
+            
+            // Whole line for Chinese
+            const qLineZh = document.createElement('div');
+            qLineZh.className = 'line-zh word-span'; 
+            qLineZh.textContent = data.q_zh;
+
+            qContent.appendChild(qLineEn);
+            qContent.appendChild(qLineZh);
+
+            // 2. Setup Answer (Hidden initially)
+            aContent.innerHTML = '';
+            
+            const aLineEn = document.createElement('div');
+            aLineEn.className = 'line-en';
+            data.a_en.split(' ').forEach(word => {
+                const span = document.createElement('span');
+                span.className = 'word-span';
+                span.textContent = word;
+                aLineEn.appendChild(span);
+            });
+
+            const aLineZh = document.createElement('div');
+            aLineZh.className = 'line-zh word-span';
+            aLineZh.textContent = data.a_zh;
+
+            aContent.appendChild(aLineEn);
+            aContent.appendChild(aLineZh);
+
+            // 3. Reset Visual State
+            aBox.classList.remove('revealed');
+            showLabel.style.display = 'block';
+            aContent.style.display = 'none';
+
+            // 4. Update Buttons
+            btnPrev.classList.toggle('btn-disabled', currentIndex === 0);
+            btnNext.classList.toggle('btn-disabled', currentIndex === qaData.length - 1);
+        }
+
+        // --- Interaction Logic ---
+
+        // 1. Reveal Answer
+        function toggleAnswer() {
+            if (!isAnswerRevealed) {
+                isAnswerRevealed = true;
+                aBox.classList.add('revealed');
+                showLabel.style.display = 'none';
+                aContent.style.display = 'flex';
+            } else {
+                // If already revealed, click reads it
+                playSequence(aContent);
+            }
+        }
+
+        // 2. Navigation
+        btnPrev.onclick = () => {
+            if (currentIndex > 0) {
+                stopSpeech();
+                currentIndex--;
+                renderCard();
+            }
+        };
+
+        btnNext.onclick = () => {
+            if (currentIndex < qaData.length - 1) {
+                stopSpeech();
+                currentIndex++;
+                renderCard();
+            }
+        };
+
+        // 3. Click Handlers
+        qBox.onclick = () => playSequence(qContent);
+        aBox.onclick = toggleAnswer;
+
+        // --- Speech Logic ---
+        function stopSpeech() {
+            if (window.speechSynthesis) window.speechSynthesis.cancel();
+            document.querySelectorAll('.speaking').forEach(el => el.classList.remove('speaking'));
+        }
+
+        function playSequence(container) {
+            if (!window.speechSynthesis) return;
+            
+            // Gather all highlightable spans inside the container
+            const spans = Array.from(container.querySelectorAll('.word-span'));
+            
+            stopSpeech();
+
+            let index = 0;
+
+            function playNext() {
+                if (index >= spans.length) return;
+
+                const el = spans[index];
+                const text = el.textContent;
+                
+                const isChinese = /[\u4e00-\u9fa5]/.test(text);
+
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = isChinese ? 'zh-CN' : 'en-US';
+                utterance.rate = 0.4; 
+
+                // Start Highlight
+                utterance.onstart = () => {
+                    el.classList.add('speaking');
+                };
+
+                // End Highlight & Next
+                const finish = () => {
+                    el.classList.remove('speaking');
+                    index++;
+                    playNext();
+                };
+
+                utterance.onend = finish;
+                utterance.onerror = finish;
+
+                window.speechSynthesis.speak(utterance);
+            }
+
+            playNext();
+        }
+
+        // Initialize
+        renderCard();
+
+    </script>
+</body>
+</html>
