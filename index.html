@@ -37,7 +37,6 @@
             background-color: var(--bg-color);
             display: flex;
             flex-direction: column;
-            /* Layout Match: Align Top with Padding */
             align-items: center;
             justify-content: flex-start;
             padding-top: 3vh;
@@ -49,7 +48,6 @@
         /* --- Main Layout --- */
         .container {
             width: 96vw;
-            /* Layout Match: Fixed height leaves buffer at bottom */
             height: 87vh; 
             display: flex;
             flex-direction: column;
@@ -144,7 +142,7 @@
             display: flex;
             gap: 2vw;
             width: 100%;
-            flex-shrink: 0; /* Don't shrink */
+            flex-shrink: 0; 
         }
 
         .nav-btn {
@@ -211,9 +209,9 @@
 
     <script>
         // ==========================================
-        //  USER DATA SECTION - EDIT HERE
+        //  USER DATA SECTION
         // ==========================================
-        const qaData = [
+      const qaData = [
             {
                 q_en: "When were you admitted to this hospital (Queensway)?",
                 q_zh: "你什么时候住进这个医院？",
@@ -268,7 +266,6 @@
 
             // 1. Setup Question
             qContent.innerHTML = '';
-            // Split English into words for layout consistency, even if not highlighting
             const qLineEn = document.createElement('div');
             qLineEn.className = 'line-en';
             data.q_en.split(' ').forEach(word => {
@@ -277,7 +274,6 @@
                 qLineEn.appendChild(span);
             });
             
-            // Whole line for Chinese
             const qLineZh = document.createElement('div');
             qLineZh.className = 'line-zh'; 
             qLineZh.textContent = data.q_zh;
@@ -315,7 +311,6 @@
 
         // --- Interaction Logic ---
 
-        // 1. Reveal Answer
         function toggleAnswer() {
             if (!isAnswerRevealed) {
                 isAnswerRevealed = true;
@@ -323,12 +318,10 @@
                 showLabel.style.display = 'none';
                 aContent.style.display = 'flex';
             } else {
-                // If already revealed, click reads it
                 playSequence(aContent);
             }
         }
 
-        // 2. Navigation
         btnPrev.onclick = () => {
             if (currentIndex > 0) {
                 stopSpeech();
@@ -345,7 +338,6 @@
             }
         };
 
-        // 3. Click Handlers
         qBox.onclick = () => playSequence(qContent);
         aBox.onclick = toggleAnswer;
 
@@ -365,14 +357,18 @@
 
             if (!enLine || !zhLine) return;
 
-            // Use full text content for smooth reading
-            const uEn = new SpeechSynthesisUtterance(enLine.textContent);
+            // FIXED: Join the separate spans with spaces so TTS reads it as a sentence
+            const textEn = Array.from(enLine.children)
+                .map(span => span.textContent)
+                .join(' ');
+
+            const uEn = new SpeechSynthesisUtterance(textEn);
             uEn.lang = 'en-US';
-            uEn.rate = 0.8; // Normal Speed
+            uEn.rate = 0.8; // User requested 0.8
 
             const uZh = new SpeechSynthesisUtterance(zhLine.textContent);
             uZh.lang = 'zh-CN';
-            uZh.rate = 0.8; // Normal Speed
+            uZh.rate = 0.8; // User requested 0.8
 
             // Chain: En -> Zh
             uEn.onend = () => {
