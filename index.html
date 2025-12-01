@@ -368,11 +368,11 @@
             // Use full text content for smooth reading
             const uEn = new SpeechSynthesisUtterance(enLine.textContent);
             uEn.lang = 'en-US';
-            uEn.rate = 1.0; // Normal Speed
+            uEn.rate = 0.8; // Normal Speed
 
             const uZh = new SpeechSynthesisUtterance(zhLine.textContent);
             uZh.lang = 'zh-CN';
-            uZh.rate = 1.0; // Normal Speed
+            uZh.rate = 0.8; // Normal Speed
 
             // Chain: En -> Zh
             uEn.onend = () => {
