@@ -211,7 +211,7 @@
         // ==========================================
         //  USER DATA SECTION
         // ==========================================
-      const qaData = [
+        const qaData = [
             {
                 q_en: "When were you admitted to this hospital (Queensway)?",
                 q_zh: "你什么时候住进这个医院？",
@@ -292,12 +292,16 @@
                 aLineEn.appendChild(span);
             });
 
+            // REMOVED: Chinese Answer Rendering
+            /*
             const aLineZh = document.createElement('div');
             aLineZh.className = 'line-zh';
             aLineZh.textContent = data.a_zh;
+            aContent.appendChild(aLineZh);
+            */
 
             aContent.appendChild(aLineEn);
-            aContent.appendChild(aLineZh);
+            // aContent.appendChild(aLineZh); // Removed
 
             // 3. Reset Visual State
             aBox.classList.remove('revealed');
@@ -355,25 +359,29 @@
             const enLine = container.querySelector('.line-en');
             const zhLine = container.querySelector('.line-zh');
 
-            if (!enLine || !zhLine) return;
+            // English is mandatory
+            if (!enLine) return;
 
-            // FIXED: Join the separate spans with spaces so TTS reads it as a sentence
+            // Join spans to read as sentence
             const textEn = Array.from(enLine.children)
                 .map(span => span.textContent)
                 .join(' ');
 
             const uEn = new SpeechSynthesisUtterance(textEn);
             uEn.lang = 'en-US';
-            uEn.rate = 0.8; // User requested 0.8
+            uEn.rate = 0.8;
 
-            const uZh = new SpeechSynthesisUtterance(zhLine.textContent);
-            uZh.lang = 'zh-CN';
-            uZh.rate = 0.8; // User requested 0.8
+            // If Chinese exists (Question box), chain it. 
+            // If not (Answer box), just read English.
+            if (zhLine) {
+                const uZh = new SpeechSynthesisUtterance(zhLine.textContent);
+                uZh.lang = 'zh-CN';
+                uZh.rate = 0.8;
 
-            // Chain: En -> Zh
-            uEn.onend = () => {
-                window.speechSynthesis.speak(uZh);
-            };
+                uEn.onend = () => {
+                    window.speechSynthesis.speak(uZh);
+                };
+            }
 
             window.speechSynthesis.speak(uEn);
         }
